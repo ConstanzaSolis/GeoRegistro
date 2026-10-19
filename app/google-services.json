@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "347430683075",
+    "project_id": "georegistro-17247",
+    "storage_bucket": "georegistro-17247.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:347430683075:android:a78b94131d29a00b643d76",
+        "android_client_info": {
+          "package_name": "com.conysolis.georegistro"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDT_zUBEGOeNf9DthusuNvmehO_c1DyDR4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
