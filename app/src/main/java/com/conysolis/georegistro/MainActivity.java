@@ -14,19 +14,32 @@ public class MainActivity extends AppCompatActivity {
 
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
 
+        // Cargar el formulario por defecto al abrir la aplicación
+        if (savedInstanceState == null) {
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.fragment_container, new RegistroFragment())
+                    .commit();
+        }
+
         bottomNav.setOnItemSelectedListener(item -> {
             Fragment selectedFragment = null;
             int itemId = item.getItemId();
 
             if (itemId == R.id.nav_registro) {
-                // Aquí irá el fragmento de registro más adelante
+                selectedFragment = new RegistroFragment();
             } else if (itemId == R.id.nav_listado) {
-                // Aquí irá el fragmento de listado más adelante
+                selectedFragment = new SensorFragment(); // Pantalla del Acelerómetro
             } else if (itemId == R.id.nav_mapa) {
-                // Aquí irá el fragmento de mapa más adelante
+                selectedFragment = new MapaFragment(); // Pantalla del Mapa
             }
 
-            return true;
+            if (selectedFragment != null) {
+                getSupportFragmentManager().beginTransaction()
+                        .replace(R.id.fragment_container, selectedFragment)
+                        .commit();
+                return true;
+            }
+            return false;
         });
     }
 }

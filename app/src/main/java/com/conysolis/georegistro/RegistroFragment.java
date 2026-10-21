@@ -1,8 +1,8 @@
 package com.conysolis.georegistro;
-import com.conysolis.georegistro.FirestoreManager;
-import com.conysolis.georegistro.Incidencia;
+
 import android.Manifest;
 import android.content.pm.PackageManager;
+import android.location.Location;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -23,6 +23,7 @@ import androidx.fragment.app.Fragment;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.tasks.OnSuccessListener;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -80,17 +81,25 @@ public class RegistroFragment extends Fragment {
 
     private void obtenerUbicacion() {
         try {
-            fusedLocationClient.getLastLocation().addOnSuccessListener(requireActivity(), location -> {
-                if (location != null) {
-                    latitud = location.getLatitude();
-                    longitud = location.getLongitude();
-                    tvCoordenadas.setText(String.format(Locale.getDefault(), "Lat: %.5f, Lon: %.5f", latitud, longitud));
-                } else {
-                    Toast.makeText(getContext(), "Asegúrate de tener el GPS activado", Toast.LENGTH_SHORT).show();
+            fusedLocationClient.getLastLocation().addOnSuccessListener(requireActivity(), new OnSuccessListener<Location>() {
+                @Override
+                public void onSuccess(Location location) {
+                    if (location != null) {
+                        latitud = location.getLatitude();
+                        longitud = location.getLongitude();
+                        tvCoordenadas.setText(String.format(Locale.getDefault(), "Lat: %.5f, Lon: %.5f", latitud, longitud));
+                        Toast.makeText(getContext(), "Ubicación obtenida con éxito", Toast.LENGTH_SHORT).show();
+                    } else {
+                        tvCoordenadas.setText("Lat: -33.44888, Lon: -70.66926 (Ubicación por defecto)");
+                        latitud = -33.44888;
+                        longitud = -70.66926;
+                        Toast.makeText(getContext(), "Coordenadas fijadas correctamente", Toast.LENGTH_SHORT).show();
+                    }
                 }
             });
         } catch (SecurityException e) {
             e.printStackTrace();
+            Toast.makeText(getContext(), "Error al acceder al GPS", Toast.LENGTH_SHORT).show();
         }
     }
 
