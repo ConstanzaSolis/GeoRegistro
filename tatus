@@ -1,0 +1,9 @@
+[33m9a5f6ad[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m fix: actualizar nivel de compatibilidad de Java a Java 17 para eliminar warnings
+[33me6bd88a[m docs: agregar DECLARACION_IA.md según requerimientos de entrega
+[33mcf9a102[m docs: agregar documentacion README.md del proyecto
+[33m1d1cddd[m feat: crear formulario de registro con validaciones y captura de GPS
+[33m7befebf[m feat: configurar Firebase Firestore para persistencia de datos y control de errores de red
+[33m08843dc[m feat: configurar Firebase Firestore para persistencia de datos y control de errores de red
+[33m7d174c4[m feat: implementar modelo de datos Incidencia y logica base de navegacion
+[33m6d8aa2b[m feat: crear menu e interfaz de navegacion con BottomNavigationView
+[33m8e9943b[m feat: inicializar proyecto GeoRegistro con soporte Java

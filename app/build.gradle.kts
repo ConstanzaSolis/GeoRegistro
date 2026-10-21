@@ -30,16 +30,22 @@ android {
     }
 }
 dependencies {
+    // AndroidX Core y UI
     implementation(libs.activity.ktx)
     implementation(libs.appcompat)
     implementation(libs.constraintlayout)
     implementation(libs.material)
 
-    // Firebase y Servicios de Google Play
+    // Firebase Cloud Firestore
     implementation("com.google.firebase:firebase-firestore:24.10.0")
-    implementation("com.google.android.gms:play-services-location:21.2.0")
-    implementation("com.google.android.gms:play-services-maps:18.2.0")
 
+    // Servicios de Ubicación (GPS)
+    implementation("com.google.android.gms:play-services-location:21.2.0")
+
+    // OpenStreetMap (Mapa interactivo sin API Keys)
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
+
+    // Pruebas Unitarias e Instrumentadas
     testImplementation(libs.junit)
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation(libs.ext.junit)
