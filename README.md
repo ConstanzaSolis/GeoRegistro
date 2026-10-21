@@ -29,3 +29,6 @@
 ## 📋 Requisitos Previos e Instalación
 
 1. Clonar el repositorio en tu máquina local:
+
+---
+
