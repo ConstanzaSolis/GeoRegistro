@@ -4,14 +4,24 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- Contenedor donde se cargarán las pantallas -->
+    <!-- Botón para abrir la pantalla de Historial -->
+    <Button
+        android:id="@+id/btnAbrirHistorial"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_margin="8dp"
+        android:text="Ver Historial y Eliminar Registros" />
+
+    <!-- Contenedor donde se cargarán las pantallas (se ajusta entre el botón y el menú) -->
     <FrameLayout
         android:id="@+id/fragment_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_above="@id/bottom_navigation" />
+        android:layout_above="@id/bottom_navigation"
+        android:layout_below="@id/btnAbrirHistorial" />
 
-    <!-- Barra de navegación inferior que usa el menú que acabas de crear -->
+    <!-- Barra de navegación inferior -->
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottom_navigation"
         android:layout_width="match_parent"

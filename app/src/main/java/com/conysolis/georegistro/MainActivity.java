@@ -1,8 +1,12 @@
 package com.conysolis.georegistro;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.widget.Button;
+
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
+
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 public class MainActivity extends AppCompatActivity {
@@ -21,6 +25,7 @@ public class MainActivity extends AppCompatActivity {
                     .commit();
         }
 
+        // Navegación por pestañas inferiores
         bottomNav.setOnItemSelectedListener(item -> {
             Fragment selectedFragment = null;
             int itemId = item.getItemId();
@@ -41,5 +46,14 @@ public class MainActivity extends AppCompatActivity {
             }
             return false;
         });
+
+        // Botón opcional para abrir el historial de registros
+        Button btnAbrirHistorial = findViewById(R.id.btnAbrirHistorial);
+        if (btnAbrirHistorial != null) {
+            btnAbrirHistorial.setOnClickListener(v -> {
+                Intent intent = new Intent(MainActivity.this, HistorialActivity.class);
+                startActivity(intent);
+            });
+        }
     }
 }
