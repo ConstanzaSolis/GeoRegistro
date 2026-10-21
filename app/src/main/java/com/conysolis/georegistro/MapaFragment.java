@@ -1,8 +1,8 @@
 package com.conysolis.georegistro;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -10,82 +10,110 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 
 import org.osmdroid.config.Configuration;
-import org.osmdroid.tileprovider.tilesource.TileSourceFactory;
+import org.osmdroid.events.MapEventsReceiver;
 import org.osmdroid.util.GeoPoint;
 import org.osmdroid.views.MapView;
+import org.osmdroid.views.overlay.MapEventsOverlay;
 import org.osmdroid.views.overlay.Marker;
-
-import java.util.List;
 
 public class MapaFragment extends Fragment {
 
     private MapView map;
+    private Marker marcacioSeleccionada;
     private final FirestoreManager firestoreManager = new FirestoreManager();
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        // Cargar configuración de OSMDroid
         Context ctx = requireContext().getApplicationContext();
-        SharedPreferences sharedPref = ctx.getSharedPreferences("osmdroid_prefs", Context.MODE_PRIVATE);
-        Configuration.getInstance().load(ctx, sharedPref);
+        Configuration.getInstance().load(ctx, PreferenceManager.getDefaultSharedPreferences(ctx));
 
         View view = inflater.inflate(R.layout.fragment_mapa, container, false);
         map = view.findViewById(R.id.map);
 
-        map.setTileSource(TileSourceFactory.MAPNIK);
-        map.setBuiltInZoomControls(true);
         map.setMultiTouchControls(true);
 
-        GeoPoint startPoint = new GeoPoint(-33.44888, -70.66926);
-        map.getController().setZoom(12.0);
+        // Punto de inicio predeterminado (Centro del mapa)
+        GeoPoint startPoint = new GeoPoint(-33.4489, -70.6693);
+        map.getController().setZoom(15.0);
         map.getController().setCenter(startPoint);
 
-        cargarMarcadores();
+        // Escuchar clics en el mapa
+        configurarClicEnMapa();
 
         return view;
     }
 
-    private void cargarMarcadores() {
-        firestoreManager.obtenerIncidencias(new FirestoreManager.ListadoCallback() {
+    private void configurarClicEnMapa() {
+        MapEventsReceiver receiver = new MapEventsReceiver() {
             @Override
-            public void onSuccess(List<Incidencia> lista) {
-                if (map == null || getContext() == null) return;
+            public boolean singleTapConfirmedHelper(GeoPoint p) {
+                // Al hacer toque simple en cualquier parte del mapa
+                mostrarMarcadorEnPunto(p);
+                mostrarDialogoConfirmacion(p);
+                return true;
+            }
 
-                map.getOverlays().clear();
+            @Override
+            public boolean longPressHelper(GeoPoint p) {
+                return false;
+            }
+        };
 
-                if (lista.isEmpty()) {
-                    Toast.makeText(getContext(), "No hay registros para mostrar", Toast.LENGTH_SHORT).show();
-                    return;
-                }
+        MapEventsOverlay overlay = new MapEventsOverlay(receiver);
+        map.getOverlays().add(overlay);
+    }
 
-                GeoPoint ultimaPos = null;
-                for (Incidencia inc : lista) {
-                    GeoPoint punto = new GeoPoint(inc.getLatitud(), inc.getLongitud());
+    private void mostrarMarcadorEnPunto(GeoPoint p) {
+        // Remover marcador anterior si existía
+        if (marcacioSeleccionada != null) {
+            map.getOverlays().remove(marcacioSeleccionada);
+        }
 
-                    Marker marker = new Marker(map);
-                    marker.setPosition(punto);
-                    marker.setTitle(inc.getTitulo());
-                    marker.setSnippet(inc.getCategoria() + " - " + inc.getFechaHora());
-                    marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
+        // Crear un marcador temporal en el punto tocado
+        marcacioSeleccionada = new Marker(map);
+        marcacioSeleccionada.setPosition(p);
+        marcacioSeleccionada.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM);
+        marcacioSeleccionada.setTitle("Ubicación seleccionada");
 
-                    map.getOverlays().add(marker);
-                    ultimaPos = punto;
-                }
+        map.getOverlays().add(marcacioSeleccionada);
+        map.invalidate(); // Refrescar vista del mapa
+    }
 
-                if (ultimaPos != null) {
-                    map.getController().setCenter(ultimaPos);
-                }
-                map.invalidate();
+    private void mostrarDialogoConfirmacion(GeoPoint p) {
+        new AlertDialog.Builder(requireContext())
+                .setTitle("Punto seleccionado")
+                .setMessage("¿Deseas registrar este lugar?\nLatitud: " + p.getLatitude() + "\nLongitud: " + p.getLongitude())
+                .setPositiveButton("Guardar Registro", (dialog, which) -> {
+                    guardarEnFirestore(p);
+                })
+                .setNegativeButton("Cancelar", null)
+                .show();
+    }
+
+    private void guardarEnFirestore(GeoPoint p) {
+        // Crear objeto de incidencia con la coordenada tocada
+        Incidencia nuevaIncidencia = new Incidencia();
+        nuevaIncidencia.setTitulo("Registro desde Mapa");
+        nuevaIncidencia.setCategoria("Mapa Interactivo");
+        nuevaIncidencia.setLatitud(p.getLatitude());
+        nuevaIncidencia.setLongitud(p.getLongitude());
+        nuevaIncidencia.setFechaHora("Fecha actual");
+
+        firestoreManager.guardarIncidencia(nuevaIncidencia, new FirestoreManager.FirestoreCallback() {
+            @Override
+            public void onSuccess() {
+                Toast.makeText(getContext(), "Ubicación guardada con éxito", Toast.LENGTH_SHORT).show();
             }
 
             @Override
             public void onError(String mensajeError) {
-                if (getContext() != null) {
-                    Toast.makeText(getContext(), "Error al cargar datos: " + mensajeError, Toast.LENGTH_SHORT).show();
-                }
+                Toast.makeText(getContext(), "Error: " + mensajeError, Toast.LENGTH_SHORT).show();
             }
         });
     }
