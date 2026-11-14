@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#7200ff" />
+  <title>GeoRegistro</title>
+
+  <!-- Mapa Leaflet (OpenStreetMap) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Firebase Compat (Firestore) -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #F3E8FF; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* Contenedor Mapa */
+    #vistaMapa { position: relative; flex: 1; display: block; }
+    #map { width: 100%; height: 100%; }
+
+    /* Buscador superior */
+    .buscador-box {
+      position: absolute; top: 14px; left: 12px; right: 12px; z-index: 1000;
+      background: #FFFFFF; border-radius: 12px; padding: 6px 8px;
+      display: flex; gap: 6px; box-shadow: 0 4px 12px rgba(59,0,130,0.2);
+    }
+    .buscador-box input {
+      flex: 1; border: none; outline: none; font-size: 15px; padding: 8px; color: #212121;
+    }
+    .btn {
+      border: none; border-radius: 10px; color: #FFFFFF; font-weight: bold;
+      padding: 10px 14px; font-size: 13px; cursor: pointer;
+    }
+    .btn-buscar { background: #9D4EFF; }
+    .btn-iniciar { background: #B67BFF; flex: 1; padding: 13px; font-size: 14px; }
+    .btn-guardar { background: #8A2BFF; flex: 1; padding: 13px; font-size: 14px; }
+    .btn-ver { background: #8A2BFF; padding: 8px 12px; font-size: 12px; }
+    .btn-eliminar { background: #9D4EFF; padding: 8px 12px; font-size: 12px; }
+
+    /* Botones inferiores mapa */
+    .acciones-mapa {
+      position: absolute; bottom: 16px; left: 12px; right: 12px; z-index: 1000;
+      display: flex; gap: 10px;
+    }
+
+    /* Vista Historial */
+    #vistaHistorial {
+      flex: 1; display: none; flex-direction: column; padding: 16px;
+      background: #F3E8FF; overflow-y: auto;
+    }
+    #vistaHistorial h2 { color: #3B0082; font-size: 20px; margin-bottom: 12px; }
+    .card {
+      background: #FAF5FF; border-radius: 14px; padding: 14px; margin-bottom: 12px;
+      box-shadow: 0 2px 8px rgba(59,0,130,0.12);
+    }
+    .card-titulo { color: #3B0082; font-weight: bold; font-size: 16px; }
+    .card-divider { height: 1px; background: #E2CCFF; margin: 8px 0; }
+    .card-coord { color: #4A148C; font-weight: bold; font-size: 13px; margin-top: 4px; }
+    .card-fecha { color: #6A1B9A; font-size: 12px; margin-top: 8px; }
+    .card-botones { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+
+    /* Barra navegación inferior */
+    .bottom-nav {
+      display: flex; background: #FFFFFF; border-top: 1px solid #E2CCFF;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    .nav-item {
+      flex: 1; text-align: center; padding: 12px; font-weight: bold; font-size: 14px;
+      color: #6A1B9A; cursor: pointer;
+    }
+    .nav-item.active { color: #FFFFFF; background: #8A2BFF; }
+  </style>
+</head>
+<body>
+
+  <!-- PANTALLA 1: MAPA -->
+  <div id="vistaMapa">
+    <div class="buscador-box">
+      <input type="text" id="inputBuscar" placeholder="Buscar dirección o lugar..." />
+      <button class="btn btn-buscar" onclick="buscarLugar()">Buscar</button>
+    </div>
+
+    <div id="map"></div>
+
+    <div class="acciones-mapa">
+      <button class="btn btn-iniciar" onclick="iniciarRuta()">Iniciar Ruta</button>
+      <button class="btn btn-guardar" onclick="guardarRuta()">Guardar Ruta</button>
+    </div>
+  </div>
+
+  <!-- PANTALLA 2: HISTORIAL -->
+  <div id="vistaHistorial">
+    <h2>Historial de Ubicaciones</h2>
+    <div id="listaHistorial">Cargando registros...</div>
+  </div>
+
+  <!-- MENÚ INFERIOR -->
+  <div class="bottom-nav">
+    <div id="tabMapa" class="nav-item active" onclick="cambiarVista('mapa')">Mapa</div>
+    <div id="tabHistorial" class="nav-item" onclick="cambiarVista('historial')">Historial</div>
+  </div>
+
+  <script>
+    // 1. PEGA AQUÍ LA CONFIGURACIÓN DE TU PROYECTO FIREBASE
+   const firebaseConfig = {
+  apiKey: "AIzaSyA0qi0UnX4NcdRVYYUO2rJVU1ZY5dPaU1A",
+  authDomain: "georegistro-17247.firebaseapp.com",
+  projectId: "georegistro-17247",
+  storageBucket: "georegistro-17247.firebasestorage.app",
+  messagingSenderId: "347430683075",
+  appId: "1:347430683075:web:227f775747d080a5643d76",
+  measurementId: "G-H3G6SGGM23"
+};
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // 2. INICIALIZAR MAPA
+    const map = L.map('map').setView([-33.4489, -70.6693], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    let puntoOrigen = null;
+    let puntoDestino = null;
+    let nombreDestino = "Destino seleccionado";
+    let markerOrigen = null;
+    let markerDestino = null;
+    let lineaRuta = null;
+
+    // Obtener GPS del iPhone
+    if (navigator.geolocation) {
+      navigator.geolocation.watchPosition(pos => {
+        puntoOrigen = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        if (!markerOrigen) {
+          markerOrigen = L.marker([puntoOrigen.lat, puntoOrigen.lng]).addTo(map).bindPopup("Tu ubicación");
+          map.setView([puntoOrigen.lat, puntoOrigen.lng], 15);
+        } else {
+          markerOrigen.setLatLng([puntoOrigen.lat, puntoOrigen.lng]);
+        }
+      }, err => console.log(err), { enableHighAccuracy: true });
+    }
+
+    // Tocar mapa para marcar destino
+    map.on('click', e => {
+      puntoDestino = { lat: e.latlng.lat, lng: e.latlng.lng };
+      nombreDestino = "Punto marcado en mapa";
+      fijarDestinoYVerRuta();
+    });
+
+    // Buscar lugar por texto
+    async function buscarLugar() {
+      const texto = document.getElementById('inputBuscar').value.trim();
+      if (!texto) return alert("Escribe una dirección o lugar");
+
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(texto)}&format=json&limit=1&countrycodes=cl`);
+      const data = await res.json();
+
+      if (data.length > 0) {
+        puntoDestino = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+        nombreDestino = data[0].display_name;
+        fijarDestinoYVerRuta();
+      } else {
+        alert("No se encontró el lugar");
+      }
+    }
+
+    async function fijarDestinoYVerRuta() {
+      if (!markerDestino) {
+        markerDestino = L.marker([puntoDestino.lat, puntoDestino.lng]).addTo(map);
+      } else {
+        markerDestino.setLatLng([puntoDestino.lat, puntoDestino.lng]);
+      }
+      markerDestino.bindPopup(nombreDestino).openPopup();
+
+      if (puntoOrigen) {
+        await dibujarRutaMorada(puntoOrigen, puntoDestino);
+      } else {
+        map.setView([puntoDestino.lat, puntoDestino.lng], 16);
+      }
+    }
+
+    // Dibujar línea morada (#8A2BFF) por las calles
+    async function dibujarRutaMorada(origen, destino) {
+      if (lineaRuta) map.removeLayer(lineaRuta);
+      try {
+        const url = `https://router.project-osrm.org/route/v1/driving/${origen.lng},${origen.lat};${destino.lng},${destino.lat}?overview=full&geometries=geojson`;
+        const res = await fetch(url);
+        const json = await res.json();
+        const coords = json.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+        lineaRuta = L.polyline(coords, { color: '#8A2BFF', weight: 6 }).addTo(map);
+      } catch {
+        lineaRuta = L.polyline([[origen.lat, origen.lng], [destino.lat, destino.lng]], { color: '#8A2BFF', weight: 6 }).addTo(map);
+      }
+      map.fitBounds(lineaRuta.getBounds(), { padding: [50, 50] });
+    }
+
+    // Iniciar ruta en Apple Maps / Google Maps del iPhone
+    function iniciarRuta() {
+      if (!puntoDestino) return alert("Busca o marca un destino primero");
+      window.open(`https://maps.apple.com/?daddr=${puntoDestino.lat},${puntoDestino.lng}&dirflg=d`, '_blank');
+    }
+
+    // Guardar en la misma colección Firestore de tu app Android
+    async function guardarRuta() {
+      if (!puntoOrigen || !puntoDestino) return alert("Necesitas ubicación GPS y un destino seleccionado");
+      await db.collection("registros_rutas").add({
+        nombreDestino: nombreDestino,
+        origenLat: puntoOrigen.lat,
+        origenLng: puntoOrigen.lng,
+        destinoLat: puntoDestino.lat,
+        destinoLng: puntoDestino.lng,
+        fecha: Date.now()
+      });
+      alert("¡Ruta guardada en el historial!");
+    }
+
+    // Cargar historial en tiempo real
+    db.collection("registros_rutas").orderBy("fecha", "desc").onSnapshot(snap => {
+      const cont = document.getElementById('listaHistorial');
+      cont.innerHTML = "";
+      snap.forEach(doc => {
+        const d = doc.data();
+        const fechaStr = new Date(d.fecha).toLocaleString('es-CL');
+        cont.innerHTML += `
+          <div class="card">
+            <div class="card-titulo">${d.nombreDestino || 'Ubicación marcada'}</div>
+            <div class="card-divider"></div>
+            <div class="card-coord">Origen: ${Number(d.origenLat).toFixed(5)}, ${Number(d.origenLng).toFixed(5)}</div>
+            <div class="card-coord">Destino: ${Number(d.destinoLat).toFixed(5)}, ${Number(d.destinoLng).toFixed(5)}</div>
+            <div class="card-fecha">Fecha y hora: ${fechaStr}</div>
+            <div class="card-botones">
+              <button class="btn btn-ver" onclick="verRutaGuardada(${d.origenLat}, ${d.origenLng}, ${d.destinoLat}, ${d.destinoLng}, '${(d.nombreDestino || '').replace(/'/g, "")}')">Ver en Mapa</button>
+              <button class="btn btn-eliminar" onclick="eliminarRuta('${doc.id}')">Eliminar</button>
+            </div>
+          </div>`;
+      });
+    });
+
+    async function verRutaGuardada(oLat, oLng, dLat, dLng, nombre) {
+      cambiarVista('mapa');
+      puntoOrigen = { lat: oLat, lng: oLng };
+      puntoDestino = { lat: dLat, lng: dLng };
+      nombreDestino = nombre;
+      if (!markerOrigen) markerOrigen = L.marker([oLat, oLng]).addTo(map);
+      else markerOrigen.setLatLng([oLat, oLng]);
+      await fijarDestinoYVerRuta();
+    }
+
+    async function eliminarRuta(id) {
+      if (confirm("¿Deseas eliminar este registro?")) {
+        await db.collection("registros_rutas").doc(id).delete();
+      }
+    }
+
+    function cambiarVista(vista) {
+      document.getElementById('vistaMapa').style.display = vista === 'mapa' ? 'block' : 'none';
+      document.getElementById('vistaHistorial').style.display = vista === 'historial' ? 'flex' : 'none';
+      document.getElementById('tabMapa').classList.toggle('active', vista === 'mapa');
+      document.getElementById('tabHistorial').classList.toggle('active', vista === 'historial');
+      if (vista === 'mapa') setTimeout(() => map.invalidateSize(), 200);
+    }
+  </script>
+</body>
+</html>
