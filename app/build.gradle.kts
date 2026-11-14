@@ -49,4 +49,7 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation(libs.ext.junit)
+
+    // ... tus otras dependencias (firebase-firestore, play-services-location, etc.) ...
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
 }

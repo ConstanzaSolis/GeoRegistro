@@ -35,6 +35,12 @@
             android:exported="false"
             android:label="Historial de Ubicaciones" />
 
+        <!-- Pantalla para Visualizar Ruta Guardada en el Mapa -->
+        <activity
+            android:name=".VerRutaActivity"
+            android:exported="false"
+            android:label="Ruta Guardada" />
+
     </application>
 
 </manifest>

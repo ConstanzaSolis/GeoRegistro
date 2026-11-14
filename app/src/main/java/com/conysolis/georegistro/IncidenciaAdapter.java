@@ -39,7 +39,12 @@ public class IncidenciaAdapter extends RecyclerView.Adapter<IncidenciaAdapter.Vi
         holder.txtCategoriaFecha.setText(item.getCategoria() + " | " + item.getFechaHora());
         holder.txtCoordenadas.setText("Lat: " + item.getLatitud() + " | Lng: " + item.getLongitud());
 
-        holder.btnEliminar.setOnClickListener(v -> listener.OnEliminarClick(item, holder.getAdapterPosition()));
+        holder.btnEliminar.setOnClickListener(v -> {
+            int posActual = holder.getBindingAdapterPosition();
+            if (posActual != RecyclerView.NO_POSITION) {
+                listener.OnEliminarClick(item, posActual);
+            }
+        });
     }
 
     @Override

@@ -1,11 +1,76 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
+    <!-- Mapa de fondo -->
     <org.osmdroid.views.MapView
-        android:id="@+id/map"
+        android:id="@+id/mapView"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-</FrameLayout>
+    <!-- Buscador superior por escrito -->
+    <LinearLayout
+        android:id="@+id/layoutBuscador"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentTop="true"
+        android:layout_margin="12dp"
+        android:background="#FFFFFF"
+        android:elevation="6dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="6dp">
+
+        <EditText
+            android:id="@+id/etBuscarLugar"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:background="@android:color/transparent"
+            android:hint="Buscar dirección o lugar..."
+            android:imeOptions="actionSearch"
+            android:inputType="text"
+            android:padding="8dp"
+            android:singleLine="true"
+            android:textColor="#212121" />
+
+        <Button
+            android:id="@+id/btnBuscarLugar"
+            android:layout_width="wrap_content"
+            android:layout_height="42dp"
+            android:backgroundTint="#9D4EFF"
+            android:text="Buscar"
+            android:textColor="#FFFFFF" />
+    </LinearLayout>
+
+    <!-- Botones inferiores: Iniciar Ruta y Guardar Registro -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_margin="12dp"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/btnIniciarGuia"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="6dp"
+            android:layout_weight="1"
+            android:backgroundTint="#B67BFF"
+            android:text="Iniciar Ruta"
+            android:textColor="#FFFFFF" />
+
+        <Button
+            android:id="@+id/btnGuardarRegistroMapa"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
+            android:layout_weight="1"
+            android:backgroundTint="#8A2BFF"
+            android:text="Guardar Ruta"
+            android:textColor="#FFFFFF" />
+    </LinearLayout>
+
+</RelativeLayout>
