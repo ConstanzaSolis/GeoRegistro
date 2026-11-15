@@ -2,28 +2,38 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <meta name="theme-color" content="#7200ff" />
   <title>GeoRegistro</title>
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    html, body { width: 100%; height: 100%; background: #F3E8FF; overflow: hidden; }
-    body { display: flex; flex-direction: column; }
+    html, body {
+      width: 100%; height: 100%; background: #F3E8FF; overflow: hidden; position: fixed;
+    }
 
-    #vistaMapa { position: relative; flex: 1; width: 100%; min-height: 0; }
-    #map { position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; z-index: 1; }
+    #app {
+      display: flex; flex-direction: column; width: 100%; height: 100%;
+    }
+
+    #vistaMapa {
+      position: relative; flex: 1 1 auto; width: 100%; height: 100%; background: #E9D5FF;
+    }
+
+    #map {
+      position: absolute; inset: 0; width: 100% !important; height: 100% !important; z-index: 1;
+    }
 
     .buscador-box {
-      position: absolute; top: 14px; left: 12px; right: 12px; z-index: 1000;
+      position: absolute; top: max(14px, env(safe-area-inset-top)); left: 12px; right: 12px; z-index: 1000;
       background: #FFFFFF; border-radius: 12px; padding: 6px 8px;
       display: flex; gap: 6px; box-shadow: 0 4px 12px rgba(59,0,130,0.2);
     }
@@ -32,7 +42,7 @@
     }
     .btn {
       border: none; border-radius: 10px; color: #FFFFFF; font-weight: bold;
-      padding: 10px 14px; font-size: 13px; cursor: pointer;
+      padding: 10px 14px; font-size: 13px; cursor: pointer; -webkit-tap-highlight-color: transparent;
     }
     .btn-buscar { background: #9D4EFF; }
     .btn-gps {
@@ -52,8 +62,9 @@
     }
 
     #vistaHistorial {
-      flex: 1; display: none; flex-direction: column; padding: 16px;
-      background: #F3E8FF; overflow-y: auto; min-height: 0;
+      flex: 1 1 auto; display: none; flex-direction: column; padding: 16px;
+      padding-top: max(16px, env(safe-area-inset-top));
+      background: #F3E8FF; overflow-y: auto; -webkit-overflow-scrolling: touch;
     }
     #vistaHistorial h2 { color: #3B0082; font-size: 20px; margin-bottom: 12px; }
     .card {
@@ -67,7 +78,7 @@
     .card-botones { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
 
     .bottom-nav {
-      display: flex; background: #FFFFFF; border-top: 1px solid #E2CCFF;
+      flex: 0 0 auto; display: flex; background: #FFFFFF; border-top: 1px solid #E2CCFF;
       padding-bottom: env(safe-area-inset-bottom); z-index: 1001;
     }
     .nav-item {
@@ -78,44 +89,57 @@
   </style>
 </head>
 <body>
+  <div id="app">
+    <div id="vistaMapa">
+      <div class="buscador-box">
+        <input type="text" id="inputBuscar" placeholder="Buscar dirección o lugar..." />
+        <button class="btn btn-buscar" onclick="buscarLugar()">Buscar</button>
+      </div>
 
-  <div id="vistaMapa">
-    <div class="buscador-box">
-      <input type="text" id="inputBuscar" placeholder="Buscar dirección o lugar..." />
-      <button class="btn btn-buscar" onclick="buscarLugar()">Buscar</button>
+      <div id="map"></div>
+
+      <button class="btn-gps" onclick="activarGPS(true)">📍 Mi Ubicación</button>
+
+      <div class="acciones-mapa">
+        <button class="btn btn-iniciar" onclick="iniciarRuta()">Iniciar Ruta</button>
+        <button class="btn btn-guardar" onclick="guardarRuta()">Guardar Ruta</button>
+      </div>
     </div>
 
-    <div id="map"></div>
-
-    <button class="btn-gps" onclick="activarGPS(true)">📍 Mi Ubicación</button>
-
-    <div class="acciones-mapa">
-      <button class="btn btn-iniciar" onclick="iniciarRuta()">Iniciar Ruta</button>
-      <button class="btn btn-guardar" onclick="guardarRuta()">Guardar Ruta</button>
+    <div id="vistaHistorial">
+      <h2>Historial de Ubicaciones</h2>
+      <div id="listaHistorial">Cargando registros...</div>
     </div>
-  </div>
 
-  <div id="vistaHistorial">
-    <h2>Historial de Ubicaciones</h2>
-    <div id="listaHistorial">Cargando registros...</div>
-  </div>
-
-  <div class="bottom-nav">
-    <div id="tabMapa" class="nav-item active" onclick="cambiarVista('mapa')">Mapa</div>
-    <div id="tabHistorial" class="nav-item" onclick="cambiarVista('historial')">Historial</div>
+    <div class="bottom-nav">
+      <div id="tabMapa" class="nav-item active" onclick="cambiarVista('mapa')">Mapa</div>
+      <div id="tabHistorial" class="nav-item" onclick="cambiarVista('historial')">Historial</div>
+    </div>
   </div>
 
   <script>
-    // 1. INICIALIZAR EL MAPA PRIMERO
-    const map = L.map('map', { zoomControl: false }).setView([-33.4489, -70.6693], 15);
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    // Ajustar altura exacta para iOS Safari
+    function ajustarAlturaIOS() {
+      document.getElementById('app').style.height = window.innerHeight + 'px';
+      if (window.map) window.map.invalidateSize(true);
+    }
+    window.addEventListener('resize', ajustarAlturaIOS);
+    ajustarAlturaIOS();
+
+    // Inicializar mapa con servidor rápido compatible con iOS
+    window.map = L.map('map', { zoomControl: false, tap: false }).setView([-33.4489, -70.6693], 15);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      subdomains: 'abcd',
       maxZoom: 19,
-      attribution: '© OpenStreetMap'
-    }).addTo(map);
+      attribution: '© OpenStreetMap © CARTO'
+    }).addTo(window.map);
 
-    setTimeout(() => map.invalidateSize(), 300);
+    // Forzar redibujado en iPhone
+    setTimeout(() => window.map.invalidateSize(true), 200);
+    setTimeout(() => window.map.invalidateSize(true), 800);
+    setTimeout(() => window.map.invalidateSize(true), 1500);
 
-    // 2. CONFIGURACIÓN DE TU PROYECTO FIREBASE
+    // Firebase
     const firebaseConfig = {
       apiKey: "AIzaSyA0qi0UnX4NcdRVYYUO2rJVU1ZY5dPaU1A",
       authDomain: "georegistro-17247.firebaseapp.com",
@@ -124,3 +148,183 @@
       messagingSenderId: "347430683075",
       appId: "1:347430683075:web:227f775747d080a5643d76",
       measurementId: "G-H3G6SGGM23"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    let puntoOrigen = null;
+    let puntoDestino = null;
+    let nombreDestino = "Destino seleccionado";
+    let markerOrigen = null;
+    let markerDestino = null;
+    let lineaRuta = null;
+
+    function activarGPS(mostrarAlerta = false) {
+      if (!navigator.geolocation) {
+        if (mostrarAlerta) alert("Tu navegador no soporta GPS.");
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(pos => {
+        actualizarOrigen(pos.coords.latitude, pos.coords.longitude, true);
+      }, err => {
+        if (mostrarAlerta) {
+          alert("Permiso GPS denegado. Revisa Ajustes > Privacidad y seguridad > Localización > Safari.");
+        }
+      }, { enableHighAccuracy: true, timeout: 10000 });
+
+      navigator.geolocation.watchPosition(pos => {
+        actualizarOrigen(pos.coords.latitude, pos.coords.longitude, false);
+      }, null, { enableHighAccuracy: true });
+    }
+
+    function actualizarOrigen(lat, lng, centrar) {
+      puntoOrigen = { lat, lng };
+      if (!markerOrigen) {
+        markerOrigen = L.marker([lat, lng]).addTo(window.map).bindPopup("Tu ubicación");
+        window.map.setView([lat, lng], 16);
+      } else {
+        markerOrigen.setLatLng([lat, lng]);
+        if (centrar) window.map.setView([lat, lng], 16);
+      }
+      if (puntoDestino) dibujarRutaMorada(puntoOrigen, puntoDestino);
+    }
+
+    activarGPS(false);
+
+    window.map.on('click', e => {
+      puntoDestino = { lat: e.latlng.lat, lng: e.latlng.lng };
+      nombreDestino = "Punto marcado en mapa";
+      fijarDestinoYVerRuta();
+    });
+
+    async function buscarLugar() {
+      const texto = document.getElementById('inputBuscar').value.trim();
+      if (!texto) return alert("Escribe una dirección o lugar");
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(texto)}&format=json&limit=1&countrycodes=cl`);
+        const data = await res.json();
+        if (data.length > 0) {
+          puntoDestino = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+          nombreDestino = data[0].display_name;
+          await fijarDestinoYVerRuta();
+        } else {
+          alert("No se encontró el lugar.");
+        }
+      } catch (e) {
+        alert("Error de conexión al buscar.");
+      }
+    }
+
+    async function fijarDestinoYVerRuta() {
+      if (!markerDestino) {
+        markerDestino = L.marker([puntoDestino.lat, puntoDestino.lng]).addTo(window.map);
+      } else {
+        markerDestino.setLatLng([puntoDestino.lat, puntoDestino.lng]);
+      }
+      markerDestino.bindPopup(nombreDestino).openPopup();
+
+      if (puntoOrigen) {
+        await dibujarRutaMorada(puntoOrigen, puntoDestino);
+      } else {
+        window.map.setView([puntoDestino.lat, puntoDestino.lng], 16);
+      }
+    }
+
+    async function dibujarRutaMorada(origen, destino) {
+      if (lineaRuta) window.map.removeLayer(lineaRuta);
+      try {
+        const url = `https://router.project-osrm.org/route/v1/driving/${origen.lng},${origen.lat};${destino.lng},${destino.lat}?overview=full&geometries=geojson`;
+        const res = await fetch(url);
+        const json = await res.json();
+        const coords = json.routes[0].geometry.coordinates.map(c => [c[1], c[0]]);
+        lineaRuta = L.polyline(coords, { color: '#8A2BFF', weight: 6 }).addTo(window.map);
+      } catch {
+        lineaRuta = L.polyline([[origen.lat, origen.lng], [destino.lat, destino.lng]], { color: '#8A2BFF', weight: 6 }).addTo(window.map);
+      }
+      window.map.fitBounds(lineaRuta.getBounds(), { padding: [60, 60] });
+    }
+
+    function iniciarRuta() {
+      if (!puntoDestino) return alert("Busca un lugar o toca el mapa primero");
+      window.location.href = `https://maps.apple.com/?daddr=${puntoDestino.lat},${puntoDestino.lng}&dirflg=d`;
+    }
+
+    async function guardarRuta() {
+      if (!puntoDestino) return alert("Busca un lugar o toca el mapa antes de guardar");
+      const origenFinal = puntoOrigen || puntoDestino;
+      try {
+        await db.collection("registros_rutas").add({
+          nombreDestino: nombreDestino,
+          origenLat: origenFinal.lat,
+          origenLng: origenFinal.lng,
+          destinoLat: puntoDestino.lat,
+          destinoLng: puntoDestino.lng,
+          fecha: Date.now()
+        });
+        alert("¡Ruta guardada en el historial!");
+      } catch (e) {
+        alert("Error al guardar: " + e.message);
+      }
+    }
+
+    db.collection("registros_rutas").orderBy("fecha", "desc").onSnapshot(snap => {
+      const cont = document.getElementById('listaHistorial');
+      if (snap.empty) {
+        cont.innerHTML = "<p style='color:#4A148C'>Aún no hay rutas guardadas.</p>";
+        return;
+      }
+      cont.innerHTML = "";
+      snap.forEach(doc => {
+        const d = doc.data();
+        const fechaStr = new Date(d.fecha).toLocaleString('es-CL');
+        cont.innerHTML += `
+          <div class="card">
+            <div class="card-titulo">${d.nombreDestino || 'Ubicación marcada'}</div>
+            <div class="card-divider"></div>
+            <div class="card-coord">Origen: ${Number(d.origenLat).toFixed(5)}, ${Number(d.origenLng).toFixed(5)}</div>
+            <div class="card-coord">Destino: ${Number(d.destinoLat).toFixed(5)}, ${Number(d.destinoLng).toFixed(5)}</div>
+            <div class="card-fecha">Fecha y hora: ${fechaStr}</div>
+            <div class="card-botones">
+              <button class="btn btn-ver" onclick="verRutaGuardada(${d.origenLat}, ${d.origenLng}, ${d.destinoLat}, ${d.destinoLng}, '${(d.nombreDestino || '').replace(/'/g, "")}')">Ver en Mapa</button>
+              <button class="btn btn-eliminar" onclick="eliminarRuta('${doc.id}')">Eliminar</button>
+            </div>
+          </div>`;
+      });
+    }, err => {
+      document.getElementById('listaHistorial').innerHTML = "<p style='color:#B00020'>Error de Firestore: " + err.message + "</p>";
+    });
+
+    async function verRutaGuardada(oLat, oLng, dLat, dLng, nombre) {
+      cambiarVista('mapa');
+      puntoOrigen = { lat: oLat, lng: oLng };
+      puntoDestino = { lat: dLat, lng: dLng };
+      nombreDestino = nombre;
+      if (!markerOrigen) markerOrigen = L.marker([oLat, oLng]).addTo(window.map);
+      else markerOrigen.setLatLng([oLat, oLng]);
+      await fijarDestinoYVerRuta();
+    }
+
+    async function eliminarRuta(id) {
+      if (confirm("¿Deseas eliminar este registro?")) {
+        try {
+          await db.collection("registros_rutas").doc(id).delete();
+        } catch (e) {
+          alert("Error al eliminar: " + e.message);
+        }
+      }
+    }
+
+    function cambiarVista(vista) {
+      document.getElementById('vistaMapa').style.display = vista === 'mapa' ? 'block' : 'none';
+      document.getElementById('vistaHistorial').style.display = vista === 'historial' ? 'flex' : 'none';
+      document.getElementById('tabMapa').classList.toggle('active', vista === 'mapa');
+      document.getElementById('tabHistorial').classList.toggle('active', vista === 'historial');
+      if (vista === 'mapa') {
+        ajustarAlturaIOS();
+        setTimeout(() => window.map.invalidateSize(true), 200);
+      }
+    }
+  </script>
+</body>
+</html>
