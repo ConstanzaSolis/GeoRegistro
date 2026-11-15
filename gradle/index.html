@@ -16,10 +16,11 @@
 
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background: #F3E8FF; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+    html, body { width: 100%; height: 100%; background: #F3E8FF; overflow: hidden; }
+    body { display: flex; flex-direction: column; }
 
-    #vistaMapa { position: relative; flex: 1; display: block; }
-    #map { width: 100%; height: 100%; }
+    #vistaMapa { position: relative; flex: 1; width: 100%; min-height: 0; }
+    #map { position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100%; height: 100%; z-index: 1; }
 
     .buscador-box {
       position: absolute; top: 14px; left: 12px; right: 12px; z-index: 1000;
@@ -52,7 +53,7 @@
 
     #vistaHistorial {
       flex: 1; display: none; flex-direction: column; padding: 16px;
-      background: #F3E8FF; overflow-y: auto;
+      background: #F3E8FF; overflow-y: auto; min-height: 0;
     }
     #vistaHistorial h2 { color: #3B0082; font-size: 20px; margin-bottom: 12px; }
     .card {
@@ -67,7 +68,7 @@
 
     .bottom-nav {
       display: flex; background: #FFFFFF; border-top: 1px solid #E2CCFF;
-      padding-bottom: env(safe-area-inset-bottom);
+      padding-bottom: env(safe-area-inset-bottom); z-index: 1001;
     }
     .nav-item {
       flex: 1; text-align: center; padding: 14px; font-weight: bold; font-size: 14px;
@@ -78,7 +79,6 @@
 </head>
 <body>
 
-  <!-- PANTALLA 1: MAPA -->
   <div id="vistaMapa">
     <div class="buscador-box">
       <input type="text" id="inputBuscar" placeholder="Buscar dirección o lugar..." />
@@ -95,20 +95,27 @@
     </div>
   </div>
 
-  <!-- PANTALLA 2: HISTORIAL -->
   <div id="vistaHistorial">
     <h2>Historial de Ubicaciones</h2>
     <div id="listaHistorial">Cargando registros...</div>
   </div>
 
-  <!-- MENÚ INFERIOR -->
   <div class="bottom-nav">
     <div id="tabMapa" class="nav-item active" onclick="cambiarVista('mapa')">Mapa</div>
     <div id="tabHistorial" class="nav-item" onclick="cambiarVista('historial')">Historial</div>
   </div>
 
   <script>
-    // ⚠️ PEGA AQUÍ LOS DATOS REALES DE TU PROYECTO FIREBASE
+    // 1. INICIALIZAR EL MAPA PRIMERO (Garantiza que siempre se vea)
+    const map = L.map('map', { zoomControl: false }).setView([-33.4489, -70.6693], 15);
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    setTimeout(() => map.invalidateSize(), 300);
+
+    // 2. CONFIGURACIÓN DE FIREBASE (Reemplaza SOLO los valores entre comillas)
     const firebaseConfig = {
      const firebaseConfig = {
   apiKey: "AIzaSyA0qi0UnX4NcdRVYYUO2rJVU1ZY5dPaU1A",
@@ -120,18 +127,15 @@
   measurementId: "G-H3G6SGGM23"
     };
 
-    const firebaseConfigurado = firebaseConfig.apiKey !== "TU_API_KEY";
     let db = null;
-
-    if (firebaseConfigurado) {
-      firebase.initializeApp(firebaseConfig);
-      db = firebase.firestore();
+    try {
+      if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "TU_API_KEY") {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+      }
+    } catch (e) {
+      console.error("Error Firebase:", e);
     }
-
-    const map = L.map('map', { zoomControl: false }).setView([-33.4489, -70.6693], 15);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap'
-    }).addTo(map);
 
     let puntoOrigen = null;
     let puntoDestino = null;
@@ -145,12 +149,11 @@
         if (mostrarAlerta) alert("Tu navegador no soporta GPS.");
         return;
       }
-
       navigator.geolocation.getCurrentPosition(pos => {
         actualizarOrigen(pos.coords.latitude, pos.coords.longitude, true);
       }, err => {
         if (mostrarAlerta) {
-          alert("Activa el permiso de ubicación en tu iPhone: Ajustes > Privacidad y seguridad > Localización > Safari.");
+          alert("Permiso GPS denegado. Revisa Ajustes > Privacidad y seguridad > Localización > Safari.");
         }
       }, { enableHighAccuracy: true, timeout: 10000 });
 
@@ -168,35 +171,29 @@
         markerOrigen.setLatLng([lat, lng]);
         if (centrar) map.setView([lat, lng], 16);
       }
-      if (puntoDestino) {
-        dibujarRutaMorada(puntoOrigen, puntoDestino);
-      }
+      if (puntoDestino) dibujarRutaMorada(puntoOrigen, puntoDestino);
     }
 
     activarGPS(false);
 
-    // Tocar mapa para marcar destino
     map.on('click', e => {
       puntoDestino = { lat: e.latlng.lat, lng: e.latlng.lng };
       nombreDestino = "Punto marcado en mapa";
       fijarDestinoYVerRuta();
     });
 
-    // Buscar lugar por texto
     async function buscarLugar() {
       const texto = document.getElementById('inputBuscar').value.trim();
       if (!texto) return alert("Escribe una dirección o lugar");
-
       try {
         const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(texto)}&format=json&limit=1&countrycodes=cl`);
         const data = await res.json();
-
         if (data.length > 0) {
           puntoDestino = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
           nombreDestino = data[0].display_name;
           await fijarDestinoYVerRuta();
         } else {
-          alert("No se encontró el lugar, intenta ser más específico.");
+          alert("No se encontró el lugar.");
         }
       } catch (e) {
         alert("Error de conexión al buscar.");
@@ -238,12 +235,8 @@
     }
 
     async function guardarRuta() {
-      if (!firebaseConfigurado) {
-        return alert("Falta pegar tus claves reales de firebaseConfig en index.html");
-      }
-      if (!puntoDestino) {
-        return alert("Busca un lugar o toca el mapa antes de guardar");
-      }
+      if (!db) return alert("Falta configurar las claves de Firebase en index.html");
+      if (!puntoDestino) return alert("Busca un lugar o toca el mapa antes de guardar");
       const origenFinal = puntoOrigen || puntoDestino;
       try {
         await db.collection("registros_rutas").add({
@@ -256,7 +249,7 @@
         });
         alert("¡Ruta guardada en el historial!");
       } catch (e) {
-        alert("Error al guardar en Firebase: " + e.message);
+        alert("Error al guardar: " + e.message);
       }
     }
 
@@ -284,8 +277,6 @@
               </div>
             </div>`;
         });
-      }, err => {
-        document.getElementById('listaHistorial').innerHTML = "<p style='color:#B00020'>Error de permisos en Firestore: " + err.message + "</p>";
       });
     } else {
       document.getElementById('listaHistorial').innerHTML = "<p style='color:#4A148C'>Configura tus claves de Firebase en index.html para ver el historial.</p>";
@@ -304,11 +295,7 @@
     async function eliminarRuta(id) {
       if (!db) return;
       if (confirm("¿Deseas eliminar este registro?")) {
-        try {
-          await db.collection("registros_rutas").doc(id).delete();
-        } catch (e) {
-          alert("Error al eliminar: " + e.message);
-        }
+        await db.collection("registros_rutas").doc(id).delete();
       }
     }
 
